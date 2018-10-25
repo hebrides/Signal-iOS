@@ -205,6 +205,14 @@ class MediaGalleryViewController: OWSNavigationController, MediaGalleryDataSourc
         notImplemented()
     }
 
+    // MARK: View LifeCycle
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        // If the user's device is already rotated, try to respect that by rotating to landscape now
+        UIViewController.attemptRotationToDeviceOrientation()
+    }
+
     // HACK: Though we don't have an input accessory view, the VC we are presented above (ConversationVC) does.
     // If the app is backgrounded and then foregrounded, when OWSWindowManager calls mainWindow.makeKeyAndVisible
     // the ConversationVC's inputAccessoryView will appear *above* us unless we'd previously become first responder.
@@ -464,6 +472,7 @@ class MediaGalleryViewController: OWSNavigationController, MediaGalleryDataSourc
 
     public func dismissMediaDetailViewController(_ mediaPageViewController: MediaPageViewController, animated isAnimated: Bool, completion: (() -> Void)?) {
         self.view.isUserInteractionEnabled = false
+        // MJK ROTATION TODO - remove?
         UIApplication.shared.isStatusBarHidden = false
 
         guard let detailView = mediaPageViewController.view else {
@@ -907,5 +916,11 @@ class MediaGalleryViewController: OWSNavigationController, MediaGalleryDataSourc
             count = self.mediaGalleryFinder.mediaCount(transaction: transaction)
         }
         return Int(count) - deletedMessages.count
+    }
+
+    // MARK: Orientation
+
+    public override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .allButUpsideDown
     }
 }
