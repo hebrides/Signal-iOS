@@ -19,6 +19,7 @@ public class MediaTileViewController: UICollectionViewController, MediaGalleryDa
         }
         return mediaGalleryDataSource.sections
     }
+
     private var galleryDates: [GalleryDate] {
         guard let mediaGalleryDataSource = self.mediaGalleryDataSource else {
             owsFailDebug("mediaGalleryDataSource was unexpectedly nil")
@@ -44,24 +45,36 @@ public class MediaTileViewController: UICollectionViewController, MediaGalleryDa
         assert(uiDatabaseConnection.isInLongLivedReadTransaction())
         self.uiDatabaseConnection = uiDatabaseConnection
 
-        // Layout Setup
+        let layout: MediaTileViewLayout = type(of: self).buildLayout()
+        self.mediaTileViewLayout = layout
+        super.init(collectionViewLayout: layout)
+    }
 
-        let screenWidth = UIScreen.main.bounds.size.width
+    private class func buildLayout() -> MediaTileViewLayout {
+        let layout = MediaTileViewLayout()
+
         let kItemsPerRow = 4
         let kInterItemSpacing: CGFloat = 2
 
+        // regardless of portrait/landscape we want to size tiles WRT the narrowest side.
+        let screenWidth = min(UIScreen.main.bounds.width, UIScreen.main.bounds.height)
         let availableWidth = screenWidth - CGFloat(kItemsPerRow + 1) * kInterItemSpacing
         let kItemWidth = floor(availableWidth / CGFloat(kItemsPerRow))
 
-        let layout: MediaTileViewLayout = MediaTileViewLayout()
-        layout.sectionInset = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 0)
+        if #available(iOS 11, *) {
+            layout.sectionInsetReference = .fromSafeArea
+        }
         layout.itemSize = CGSize(width: kItemWidth, height: kItemWidth)
         layout.minimumInteritemSpacing = kInterItemSpacing
         layout.minimumLineSpacing = kInterItemSpacing
         layout.sectionHeadersPinToVisibleBounds = true
-        self.mediaTileViewLayout = layout
 
-        super.init(collectionViewLayout: layout)
+        return layout
+    }
+
+    override public func viewWillTransition(to size: CGSize,
+                                            with coordinator: UIViewControllerTransitionCoordinator) {
+        self.mediaTileViewLayout.invalidateLayout()
     }
 
     required public init?(coder aDecoder: NSCoder) {
@@ -110,6 +123,7 @@ public class MediaTileViewController: UICollectionViewController, MediaGalleryDa
         self.footerBarBottomConstraint = footerBar.autoPinEdge(toSuperviewEdge: .bottom, withInset: -kFooterBarHeight)
 
         updateSelectButton()
+        self.mediaTileViewLayout.invalidateLayout()
     }
 
     private func indexPath(galleryItem: MediaGalleryItem) -> IndexPath? {
@@ -139,6 +153,12 @@ public class MediaTileViewController: UICollectionViewController, MediaGalleryDa
         self.view.layoutIfNeeded()
         self.collectionView?.scrollToItem(at: indexPath, at: .centeredVertically, animated: false)
         self.autoLoadMoreIfNecessary()
+    }
+
+    // MARK: Orientation
+
+    override public var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return .allButUpsideDown
     }
 
     // MARK: UICollectionViewDelegate
@@ -716,7 +736,7 @@ public class MediaTileViewController: UICollectionViewController, MediaGalleryDa
 
 // MARK: - Private Helper Classes
 
-// Accomodates remaining scrolled to the same "apparent" position when new content is insterted
+// Accomodates remaining scrolled to the same "apparent" position when new content is inserted
 // into the top of a collectionView. There are multiple ways to solve this problem, but this
 // is the only one which avoided a perceptible flicker.
 private class MediaTileViewLayout: UICollectionViewFlowLayout {
@@ -737,6 +757,11 @@ private class MediaTileViewLayout: UICollectionViewFlowLayout {
             contentSizeBeforeInsertingToTop = nil
             isInsertingCellsToTop = false
         }
+    }
+
+    override func layoutAttributesForItem(at indexPath: IndexPath) -> UICollectionViewLayoutAttributes? {
+        let layoutAttributes = super.layoutAttributesForItem(at: indexPath)
+        return layoutAttributes
     }
 }
 
