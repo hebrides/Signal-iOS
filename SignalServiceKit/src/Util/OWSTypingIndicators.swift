@@ -223,7 +223,7 @@ public class OWSTypingIndicatorsImpl: NSObject, OWSTypingIndicators {
 
     // MARK: -
 
-    // Map of thread id-to-recipient id-to-device-id-to-IncomingIndicators.
+    // Map of (thread id and recipient id)-to-(device id)-to-IncomingIndicators.
     private var incomingIndicatorsMap = [String: [UInt: IncomingIndicators]]()
 
     private func incomingIndicatorsKey(forThread thread: TSThread, recipientId: String) -> String {
